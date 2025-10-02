@@ -39,6 +39,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             icon: const Icon(Icons.file_download),
             onPressed: () => context.read<PurchaseProvider>().exportToExcel(),
           ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: () => context.read<PurchaseProvider>().exportToPdf(),
+          ),
         ],
       ),
       body: Consumer<PurchaseProvider>(
@@ -205,11 +209,19 @@ class PurchaseExpansionCard extends StatelessWidget {
                               ),
                             ],
                           ),
+                        if (item.comment != null && item.comment!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              'Commentaire: ${item.comment}',
+                              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                            ),
+                          ),
                         const Divider(height: 8),
                       ],
                     ),
                   );
-                }).toList(),
+                }),
 
                 if (purchase.totalPaymentFees > 0)
                   Padding(
@@ -234,7 +246,7 @@ class PurchaseExpansionCard extends StatelessWidget {
               ],
             ),
           ),
-          ButtonBar(
+          OverflowBar(
             alignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(

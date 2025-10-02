@@ -397,6 +397,7 @@ class _PurchaseItemCard extends StatefulWidget {
 class _PurchaseItemCardState extends State<_PurchaseItemCard> {
   late final TextEditingController _quantityController;
   late final TextEditingController _priceController;
+  late final TextEditingController _commentController;
 
   @override
   void initState() {
@@ -404,12 +405,14 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
     final item = context.read<PurchaseProvider>().itemsBuilder[widget.index];
     _quantityController = TextEditingController(text: item.quantity.toString());
     _priceController = TextEditingController(text: item.unitPrice.toString());
+    _commentController = TextEditingController(text: item.comment);
   }
 
   @override
   void dispose() {
     _quantityController.dispose();
     _priceController.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -422,6 +425,9 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
     }
     if (_priceController.text != item.unitPrice.toString()) {
       _priceController.text = item.unitPrice.toString();
+    }
+    if (_commentController.text != item.comment) {
+      _commentController.text = item.comment ?? '';
     }
   }
 
@@ -559,6 +565,15 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _commentController,
+              decoration: const InputDecoration(labelText: 'Commentaire (optionnel)', prefixIcon: Icon(Icons.comment)),
+              onChanged: (value) {
+                provider.updateItemComment(widget.index, value);
+              },
+              maxLines: 3,
             ),
             const SizedBox(height: 12),
             Container(

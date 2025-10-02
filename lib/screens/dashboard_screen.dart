@@ -5,7 +5,6 @@ import 'package:provisions/widgets/analytics_card.dart';
 import 'package:provisions/widgets/supplier_chart.dart';
 import 'package:provisions/widgets/project_type_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:provisions/widgets/app_brand.dart';
 import 'package:provisions/services/auth_service.dart';
 import 'package:provisions/screens/auth_screen.dart';
 

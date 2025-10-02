@@ -6,6 +6,7 @@ class PurchaseItem {
   final double quantity;
   final double unitPrice;
   final double paymentFee; // New field for payment fee
+  final String? comment;
 
   // For display purposes, not stored in DB
   final String? productName;
@@ -21,6 +22,7 @@ class PurchaseItem {
     this.paymentFee = 0.0, // Default to 0.0
     this.productName, // Not required for DB
     this.supplierName, // Not required for DB
+    this.comment,
   });
 
   double get total => (quantity * unitPrice) + paymentFee; // Include paymentFee in total
@@ -34,6 +36,7 @@ class PurchaseItem {
       'quantity': quantity,
       'unitPrice': unitPrice,
       'paymentFee': paymentFee, // Include paymentFee
+      'comment': comment,
     };
   }
 
@@ -46,6 +49,7 @@ class PurchaseItem {
       quantity: (map['quantity'] as num?)?.toDouble() ?? 0.0,
       unitPrice: (map['unitPrice'] as num?)?.toDouble() ?? 0.0,
       paymentFee: (map['paymentFee'] as num?)?.toDouble() ?? 0.0, // Read paymentFee, default to 0.0
+      comment: map['comment'] as String?,
       // The join will provide these fields
       productName: map['productName'] as String?, 
       supplierName: map['supplierName'] as String?,
@@ -62,6 +66,7 @@ class PurchaseItem {
     double? paymentFee, // Include paymentFee
     String? productName,
     String? supplierName,
+    String? comment,
   }) {
     return PurchaseItem(
       id: id ?? this.id,
@@ -73,6 +78,7 @@ class PurchaseItem {
       paymentFee: paymentFee ?? this.paymentFee, // Copy paymentFee
       productName: productName ?? this.productName,
       supplierName: supplierName ?? this.supplierName,
+      comment: comment ?? this.comment,
     );
   }
 }

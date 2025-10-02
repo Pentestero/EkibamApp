@@ -6,6 +6,7 @@ import 'package:provisions/models/supplier.dart';
 import 'package:provisions/services/auth_service.dart';
 import 'package:provisions/services/database_service.dart';
 import 'package:provisions/services/excel_service.dart';
+import 'package:provisions/services/pdf_service.dart';
 
 const List<String> _projectTypes = ['Client', 'Interne', 'Mixte'];
 const Map<String, Map<String, double>> _paymentFeePercentages = {
@@ -220,6 +221,13 @@ class PurchaseProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void updateItemComment(int index, String? comment) {
+    if (index < 0 || index >= _itemsBuilder.length) return;
+    final oldItem = _itemsBuilder[index];
+    _itemsBuilder[index] = oldItem.copyWith(comment: comment);
+    notifyListeners();
+  }
+
   void updatePurchaseHeader({DateTime? date, String? owner, String? projectType, String? paymentMethod, String? comments}) {
     _purchaseBuilder = _purchaseBuilder.copyWith(date: date, owner: owner, projectType: projectType, paymentMethod: paymentMethod, comments: comments);
     if (paymentMethod != null) _recalculateAllItemFees();
@@ -275,6 +283,12 @@ class PurchaseProvider with ChangeNotifier {
   Future<void> exportToExcel() async {
     _setLoading(true);
     await ExcelService.shareExcelReport(_purchases);
+    _setLoading(false);
+  }
+
+  Future<void> exportToPdf() async {
+    _setLoading(true);
+    await PdfService.generatePurchaseReport(_purchases);
     _setLoading(false);
   }
 
