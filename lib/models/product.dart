@@ -29,4 +29,18 @@ class Product {
       defaultPrice: map['defaultPrice'],
     );
   }
+
+  Product copyWith({
+    int? id,
+    String? name,
+    String? unit,
+    double? defaultPrice,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      unit: unit ?? this.unit,
+      defaultPrice: defaultPrice ?? this.defaultPrice,
+    );
+  }
 }

@@ -1,3 +1,4 @@
+
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provisions/models/purchase.dart';
@@ -5,353 +6,137 @@ import 'package:provisions/models/purchase_item.dart';
 import 'package:provisions/models/product.dart';
 import 'package:provisions/models/supplier.dart';
 
-/// A web-friendly persistence layer using SharedPreferences.
-/// This service mimics a relational database structure to support the app's data model.
 class DatabaseService {
-  // Keys for storing data collections in SharedPreferences
-  static const String _productsKey = 'db_products_v5';
-  static const String _suppliersKey = 'db_suppliers_v5';
-  static const String _requestersKey = 'db_requesters_v5';
-  static const String _paymentMethodsKey = 'db_payment_methods_v5'; // New key for payment methods
-  static const String _purchasesKey = 'db_purchases_v5';
-  static const String _purchaseItemsKey = 'db_purchase_items_v5';
-  static const String _seededKey = 'db_seeded_v6'; // Flag to check if db has been seeded
-
-  // Singleton instance
   DatabaseService._privateConstructor();
   static final DatabaseService instance = DatabaseService._privateConstructor();
 
-  // Seeding data on first launch
-  Future<void> _seedDatabase() async {
+  // --- Key Generation ---
+  String _purchasesKey(String userId) => 'user_purchases_$userId';
+  String _productsKey(String userId) => 'user_products_$userId';
+  String _suppliersKey(String userId) => 'user_suppliers_$userId';
+  String _requestersKey(String userId) => 'user_requesters_$userId';
+  String _paymentMethodsKey(String userId) => 'user_payment_methods_$userId';
+  String _seededKey(String userId) => 'user_seeded_$userId';
+
+  Future<void> _seedDatabase(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_seededKey) ?? false) return; // Already seeded
+    if (prefs.getBool(_seededKey(userId)) ?? false) return;
 
-    // Seed Products
-    final products = _getSeedProducts();
-    await prefs.setString(_productsKey, json.encode(products.map((p) => p.toMap()).toList()));
-
-    // Seed Suppliers
-    final suppliers = _getSeedSuppliers();
-    await prefs.setString(_suppliersKey, json.encode(suppliers.map((s) => s.toMap()).toList()));
-
-    // Seed Requesters
-    await prefs.setStringList(_requestersKey, _getSeedRequesters());
-
-    // Seed Payment Methods
-    await prefs.setStringList(_paymentMethodsKey, _getSeedPaymentMethods());
-
-    await prefs.setBool(_seededKey, true);
+    await prefs.setString(_productsKey(userId), json.encode(_getSeedProducts().map((p) => p.toMap()).toList()));
+    await prefs.setString(_suppliersKey(userId), json.encode(_getSeedSuppliers().map((s) => s.toMap()).toList()));
+    await prefs.setStringList(_requestersKey(userId), _getSeedRequesters());
+    await prefs.setStringList(_paymentMethodsKey(userId), _getSeedPaymentMethods());
+    await prefs.setBool(_seededKey(userId), true);
   }
 
   // --- Data Access Methods ---
 
-  Future<List<Product>> getProducts() async {
-    await _seedDatabase(); // Ensure DB is seeded
+  Future<List<Product>> getProducts(String userId) async {
+    await _seedDatabase(userId);
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_productsKey) ?? '[]';
-    final List<dynamic> jsonList = json.decode(jsonString);
-    return jsonList.map((map) => Product.fromMap(map)).toList();
+    final jsonString = prefs.getString(_productsKey(userId)) ?? '[]';
+    return (json.decode(jsonString) as List).map((map) => Product.fromMap(map)).toList();
   }
 
-  Future<List<Supplier>> getSuppliers() async {
-    await _seedDatabase(); // Ensure DB is seeded
+  Future<List<Supplier>> getSuppliers(String userId) async {
+    await _seedDatabase(userId);
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_suppliersKey) ?? '[]';
-    final List<dynamic> jsonList = json.decode(jsonString);
-    return jsonList.map((map) => Supplier.fromMap(map)).toList();
+    final jsonString = prefs.getString(_suppliersKey(userId)) ?? '[]';
+    return (json.decode(jsonString) as List).map((map) => Supplier.fromMap(map)).toList();
   }
 
-  Future<List<String>> getRequesters() async {
-    await _seedDatabase(); // Ensure DB is seeded
+  Future<List<String>> getRequesters(String userId) async {
+    await _seedDatabase(userId);
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(_requestersKey) ?? [];
+    return prefs.getStringList(_requestersKey(userId)) ?? [];
   }
 
-  Future<List<String>> getPaymentMethods() async {
-    await _seedDatabase(); // Ensure DB is seeded
+  Future<List<String>> getPaymentMethods(String userId) async {
+    await _seedDatabase(userId);
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList(_paymentMethodsKey) ?? [];
+    return prefs.getStringList(_paymentMethodsKey(userId)) ?? [];
   }
 
-  Future<Purchase> insertPurchase(Purchase purchase) async {
+  Future<List<Purchase>> getAllPurchases(String userId) async {
+    await _seedDatabase(userId);
     final prefs = await SharedPreferences.getInstance();
-
-    // Load current purchases and items
-    final purchasesJson = prefs.getString(_purchasesKey) ?? '[]';
-    final itemsJson = prefs.getString(_purchaseItemsKey) ?? '[]';
-    final List<dynamic> purchaseList = json.decode(purchasesJson);
-    final List<dynamic> itemList = json.decode(itemsJson);
-
-    // --- Generate Request Number ---
-    final now = DateTime.now();
-    final datePrefix = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    
-    int dailyCounter = 1;
-    for (final p in purchaseList.reversed) {
-      final pDate = DateTime.fromMillisecondsSinceEpoch(p['createdAt']);
-      if (pDate.year == now.year && pDate.month == now.month && pDate.day == now.day) {
-        final pRequestNumber = p['requestNumber'] as String? ?? '';
-        final parts = pRequestNumber.split('-');
-        if (parts.length == 4) {
-          dailyCounter = (int.tryParse(parts.last) ?? 0) + 1;
-          break;
-        }
-      }
-    }
-
-    final requestNumber = '#EKA-$datePrefix-$dailyCounter';
-    // --- End Generate Request Number ---
-
-    final newPurchaseId = (purchaseList.isNotEmpty ? purchaseList.map((p) => p['id'] as int).reduce((a, b) => a > b ? a : b) : 0) + 1;
-    
-    final newPurchase = purchase.copyWith(
-      id: newPurchaseId,
-      requestNumber: requestNumber,
-    );
-
-    purchaseList.add(newPurchase.toMap());
-
-    int newItemId = (itemList.isNotEmpty ? itemList.map((i) => i['id'] as int).reduce((a, b) => a > b ? a : b) : 0);
-    for (final item in newPurchase.items) {
-      newItemId++;
-      final itemMap = item.toMap()
-        ..['id'] = newItemId
-        ..['purchaseId'] = newPurchaseId
-        ..['paymentFee'] = item.paymentFee; // Include paymentFee
-      itemList.add(itemMap);
-    }
-
-    await prefs.setString(_purchasesKey, json.encode(purchaseList));
-    await prefs.setString(_purchaseItemsKey, json.encode(itemList));
-
-    return newPurchase;
-  }
-
-  Future<Product> insertProduct(Product product) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_productsKey) ?? '[]';
-    final List<dynamic> productList = json.decode(jsonString);
-
-    final newId = (productList.isNotEmpty
-            ? productList.map((p) => p['id'] as int).reduce((a, b) => a > b ? a : b)
-            : 0) +
-        1;
-    final newProduct = Product(
-      id: newId,
-      name: product.name,
-      unit: product.unit,
-      defaultPrice: product.defaultPrice,
-    );
-
-    productList.add(newProduct.toMap());
-    await prefs.setString(_productsKey, json.encode(productList));
-    return newProduct;
-  }
-
-  Future<Supplier> insertSupplier(Supplier supplier) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_suppliersKey) ?? '[]';
-    final List<dynamic> supplierList = json.decode(jsonString);
-
-    final newId = (supplierList.isNotEmpty
-            ? supplierList.map((s) => s['id'] as int).reduce((a, b) => a > b ? a : b)
-            : 0) +
-        1;
-    final newSupplier = Supplier(
-      id: newId,
-      name: supplier.name,
-    );
-
-    supplierList.add(newSupplier.toMap());
-    await prefs.setString(_suppliersKey, json.encode(supplierList));
-    return newSupplier;
-  }
-
-  Future<String> insertRequester(String name) async {
-    final prefs = await SharedPreferences.getInstance();
-    final requesters = await getRequesters();
-    if (!requesters.contains(name)) {
-      requesters.add(name);
-      await prefs.setStringList(_requestersKey, requesters);
-    }
-    return name;
-  }
-
-  Future<String> insertPaymentMethod(String name) async {
-    final prefs = await SharedPreferences.getInstance();
-    final paymentMethods = await getPaymentMethods();
-    if (!paymentMethods.contains(name)) {
-      paymentMethods.add(name);
-      await prefs.setStringList(_paymentMethodsKey, paymentMethods);
-    }
-    return name;
-  }
-
-  Future<List<Purchase>> getAllPurchases() async {
-    await _seedDatabase();
-    final prefs = await SharedPreferences.getInstance();
-
-    final purchasesJson = prefs.getString(_purchasesKey) ?? '[]';
-    final itemsJson = prefs.getString(_purchaseItemsKey) ?? '[]';
-    final List<dynamic> purchaseListJson = json.decode(purchasesJson);
-    final List<dynamic> itemListJson = json.decode(itemsJson);
+    final jsonString = prefs.getString(_purchasesKey(userId)) ?? '[]';
+    final List<dynamic> purchaseListJson = json.decode(jsonString);
 
     if (purchaseListJson.isEmpty) return [];
 
-    // For efficient lookup
-    final products = await getProducts();
-    final suppliers = await getSuppliers();
+    final products = await getProducts(userId);
+    final suppliers = await getSuppliers(userId);
     final productMap = {for (var p in products) p.id: p};
     final supplierMap = {for (var s in suppliers) s.id: s};
 
-    // Create a map of items by their purchaseId
-    final Map<int, List<PurchaseItem>> itemsByPurchaseId = {};
-    for (final itemMap in itemListJson) {
-      final item = PurchaseItem.fromMap(itemMap).copyWith(
-        productName: productMap[itemMap['productId']]?.name ?? 'N/A',
-        supplierName: itemMap['supplierId'] != null ? supplierMap[itemMap['supplierId']]?.name ?? 'N/A' : 'Aucun',
-      );
-      (itemsByPurchaseId[item.purchaseId] ??= []).add(item);
-    }
-
-    // Build the final list of Purchase objects
-    List<Purchase> purchases = [];
-    for (final pMap in purchaseListJson) {
+    List<Purchase> purchases = purchaseListJson.map((pMap) {
       final purchase = Purchase.fromMap(pMap);
-      purchase.items = itemsByPurchaseId[purchase.id] ?? [];
-      purchases.add(purchase);
-    }
-    
-    // Sort by creation date descending
-    purchases.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      purchase.items = (pMap['items'] as List).map((itemMap) {
+        final item = PurchaseItem.fromMap(itemMap);
+        return item.copyWith(
+          productName: productMap[item.productId]?.name ?? 'N/A',
+          supplierName: supplierMap[item.supplierId]?.name ?? 'N/A',
+        );
+      }).toList();
+      return purchase;
+    }).toList();
 
+    purchases.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return purchases;
   }
 
-  Future<int> deletePurchase(int id) async {
+  Future<void> saveAllPurchases(String userId, List<Purchase> purchases) async {
     final prefs = await SharedPreferences.getInstance();
-
-    final purchasesJson = prefs.getString(_purchasesKey) ?? '[]';
-    final itemsJson = prefs.getString(_purchaseItemsKey) ?? '[]';
-    List<dynamic> purchaseList = json.decode(purchasesJson);
-    List<dynamic> itemList = json.decode(itemsJson);
-
-    final initialLength = purchaseList.length;
-    purchaseList.removeWhere((p) => p['id'] == id);
-    itemList.removeWhere((i) => i['purchaseId'] == id);
-
-    await prefs.setString(_purchasesKey, json.encode(purchaseList));
-    await prefs.setString(_purchaseItemsKey, json.encode(itemList));
-
-    return initialLength - purchaseList.length; // 1 if deleted, 0 if not found
+    final List<Map<String, dynamic>> purchaseList = purchases.map((p) => p.toMapWithItems()).toList();
+    await prefs.setString(_purchasesKey(userId), json.encode(purchaseList));
   }
-
-  Future<Purchase> updatePurchase(Purchase purchase) async {
+  
+  Future<Product> insertProduct(String userId, Product product) async {
+    final products = await getProducts(userId);
+    final newId = (products.isNotEmpty ? products.map((p) => p.id!).reduce((a, b) => a > b ? a : b) : 0) + 1;
+    final newProduct = product.copyWith(id: newId);
+    products.add(newProduct);
+    
     final prefs = await SharedPreferences.getInstance();
-
-    // Load current purchases and items
-    final purchasesJson = prefs.getString(_purchasesKey) ?? '[]';
-    final itemsJson = prefs.getString(_purchaseItemsKey) ?? '[]';
-    final List<dynamic> purchaseList = json.decode(purchasesJson);
-    final List<dynamic> itemList = json.decode(itemsJson);
-
-    // Find and update the purchase
-    final purchaseIndex = purchaseList.indexWhere((p) => p['id'] == purchase.id);
-    if (purchaseIndex != -1) {
-      purchaseList[purchaseIndex] = purchase.toMap();
-    } else {
-      // Or should we insert if not found? For now, let's throw.
-      throw Exception('Purchase with id ${purchase.id} not found for update.');
-    }
-
-    // Remove old items for this purchase
-    itemList.removeWhere((item) => item['purchaseId'] == purchase.id);
-
-    // Add new/updated items for this purchase, ensuring they have IDs
-    int newItemId = (itemList.isNotEmpty ? itemList.map((i) => i['id'] as int).reduce((a, b) => a > b ? a : b) : 0);
-    for (final item in purchase.items) {
-      newItemId++;
-      final itemMap = item.toMap()
-        ..['id'] = newItemId
-        ..['purchaseId'] = purchase.id
-        ..['paymentFee'] = item.paymentFee; // Include paymentFee
-      itemList.add(itemMap);
-    }
-
-    // Save back to SharedPreferences
-    await prefs.setString(_purchasesKey, json.encode(purchaseList));
-    await prefs.setString(_purchaseItemsKey, json.encode(itemList));
-
-    return purchase;
+    await prefs.setString(_productsKey(userId), json.encode(products.map((p) => p.toMap()).toList()));
+    return newProduct;
   }
 
-  // --- Analytics --- (These are now more expensive, but work)
+  Future<Supplier> insertSupplier(String userId, Supplier supplier) async {
+    final suppliers = await getSuppliers(userId);
+    final newId = (suppliers.isNotEmpty ? suppliers.map((s) => s.id!).reduce((a, b) => a > b ? a : b) : 0) + 1;
+    final newSupplier = supplier.copyWith(id: newId);
+    suppliers.add(newSupplier);
 
-  Future<Map<String, double>> getTotalBySupplier() async {
-    final purchases = await getAllPurchases();
-    final Map<String, double> totals = {};
-    for (final p in purchases) {
-      for (final item in p.items) {
-        final supplierName = item.supplierId != null ? item.supplierName ?? 'N/A' : 'Aucun';
-        totals[supplierName] = (totals[supplierName] ?? 0) + item.total;
-      }
-    }
-    return totals;
-  }
-
-  Future<Map<String, double>> getTotalByProjectType() async {
-    final purchases = await getAllPurchases();
-    final Map<String, double> totals = {};
-    for (final p in purchases) {
-      totals[p.projectType] = (totals[p.projectType] ?? 0) + p.grandTotal;
-    }
-    return totals;
-  }
-
-  Future<Map<String, double>> getTotalByProduct() async {
-    final purchases = await getAllPurchases();
-    final Map<String, double> totals = {};
-    for (final p in purchases) {
-      for (final item in p.items) {
-        final productName = item.productName ?? 'Autre';
-        totals[productName] = (totals[productName] ?? 0) + item.total;
-      }
-    }
-    return totals;
-  }
-
-  Future<double> getTotalSpent() async {
-    final purchases = await getAllPurchases();
-    return purchases.fold<double>(0.0, (sum, p) => sum + p.grandTotal);
-  }
-
-  Future<int> getTotalPurchases() async {
     final prefs = await SharedPreferences.getInstance();
-    final purchasesJson = prefs.getString(_purchasesKey) ?? '[]';
-    return (json.decode(purchasesJson) as List).length;
+    await prefs.setString(_suppliersKey(userId), json.encode(suppliers.map((s) => s.toMap()).toList()));
+    return newSupplier;
   }
 
-  // Temporary method to clear all data for debugging
-  Future<void> clearAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Clear ALL SharedPreferences data
-    print('All SharedPreferences data cleared!');
+  Future<String> insertRequester(String userId, String name) async {
+    final requesters = await getRequesters(userId);
+    if (!requesters.contains(name)) {
+      requesters.add(name);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_requestersKey(userId), requesters);
+    }
+    return name;
   }
 
-  // --- Seeding Data Definitions ---
-
-  List<String> _getSeedRequesters() {
-    return [
-      'CET', 'Aurelien', 'Joseph', 'Cabrel', 'Marcel'
-    ];
+  Future<String> insertPaymentMethod(String userId, String name) async {
+    final paymentMethods = await getPaymentMethods(userId);
+    if (!paymentMethods.contains(name)) {
+      paymentMethods.add(name);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_paymentMethodsKey(userId), paymentMethods);
+    }
+    return name;
   }
 
-  List<String> _getSeedPaymentMethods() {
-    return [
-      'Especes', 'MoMo', 'OM', 'Wave'
-    ];
-  }
-
+  // --- Seeding Data Definitions (same as before) ---
+  List<String> _getSeedRequesters() => ['CET', 'Aurelien', 'Joseph', 'Cabrel', 'Marcel'];
+  List<String> _getSeedPaymentMethods() => ['Especes', 'MoMo', 'OM', 'Wave'];
   List<Product> _getSeedProducts() {
     int idCounter = 0;
     final Map<String, List<Map<String, dynamic>>> categorizedProducts = {
@@ -424,17 +209,13 @@ class DatabaseService {
         ));
       }
     });
-    // Sort alphabetically by name for better UX in dropdown
     productList.sort((a, b) => a.name.compareTo(b.name));
     return productList;
   }
 
   List<Supplier> _getSeedSuppliers() {
     int idCounter = 0;
-    final suppliers = [
-      'ENEO', 'CAMTEL', 'AGOGO', 'Quincaillerie EDEA', 
-      'Quincaillerie Douala', 'Quincallerie Yaounde', 'Aucun'
-    ];
+    final suppliers = ['ENEO', 'CAMTEL', 'AGOGO', 'Quincaillerie EDEA', 'Quincaillerie Douala', 'Quincallerie Yaounde', 'Aucun'];
     return suppliers.map((name) => Supplier(id: ++idCounter, name: name)).toList();
   }
 }

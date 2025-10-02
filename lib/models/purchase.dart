@@ -41,6 +41,12 @@ class Purchase {
     };
   }
 
+  Map<String, dynamic> toMapWithItems() {
+    final map = toMap();
+    map['items'] = items.map((item) => item.toMap()).toList();
+    return map;
+  }
+
   static Purchase fromMap(Map<String, dynamic> map) {
     return Purchase(
       id: map['id'] as int?,

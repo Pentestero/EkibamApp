@@ -739,7 +739,10 @@ class __AddProductDialogState extends State<_AddProductDialog> {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<PurchaseProvider>();
-    final categories = provider.productCategories;
+    final categories = provider.products.map((p) {
+      final parts = p.name.split(':');
+      return parts.length > 1 ? parts.first.trim() : 'Autres';
+    }).toSet().toList();
     if (_category.isEmpty && categories.isNotEmpty) {
       _category = categories.first;
     }

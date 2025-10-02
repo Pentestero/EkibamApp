@@ -6,6 +6,8 @@ import 'package:provisions/widgets/supplier_chart.dart';
 import 'package:provisions/widgets/project_type_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:provisions/widgets/app_brand.dart';
+import 'package:provisions/services/auth_service.dart';
+import 'package:provisions/screens/auth_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,8 +31,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const AppBrand(),
-        actions: [
+                title: Consumer<PurchaseProvider>(
+          builder: (context, provider, child) {
+            final userName = AuthService.instance.currentUser?.name ?? '';
+            return Text('Bienvenue, $userName');
+          },
+        ),
+                actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+            tooltip: 'Supprimer le compte',
+            onPressed: () => _confirmDeleteAccount(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Se déconnecter',
+            onPressed: () async {
+              await AuthService.instance.logout();
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const AuthScreen()),
+                  (Route<dynamic> route) => false,
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
@@ -254,5 +279,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  
+  void _confirmDeleteAccount(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Supprimer le compte ?'),
+          content: const Text('Cette action est irréversible. Toutes les données associées à ce compte seront définitivement perdues. Êtes-vous sûr ?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Annuler'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Supprimer'),
+              onPressed: () async {
+                await AuthService.instance.deleteCurrentUser();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const AuthScreen()),
+                    (Route<dynamic> route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

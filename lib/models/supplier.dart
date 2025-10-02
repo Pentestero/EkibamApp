@@ -21,4 +21,14 @@ class Supplier {
       name: map['name'],
     );
   }
+
+  Supplier copyWith({
+    int? id,
+    String? name,
+  }) {
+    return Supplier(
+      id: id ?? this.id,
+      name: name ?? this.name,
+    );
+  }
 }
