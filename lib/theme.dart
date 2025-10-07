@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class LightModeColors {
   static const lightPrimary = Color(0xFF8B4513); // Brown wood color
@@ -86,63 +85,63 @@ ThemeData get lightTheme => ThemeData(
     elevation: 0,
   ),
   textTheme: TextTheme(
-    displayLarge: GoogleFonts.inter(
+    displayLarge: TextStyle(
       fontSize: FontSizes.displayLarge,
       fontWeight: FontWeight.normal,
     ),
-    displayMedium: GoogleFonts.inter(
+    displayMedium: TextStyle(
       fontSize: FontSizes.displayMedium,
       fontWeight: FontWeight.normal,
     ),
-    displaySmall: GoogleFonts.inter(
+    displaySmall: TextStyle(
       fontSize: FontSizes.displaySmall,
       fontWeight: FontWeight.w600,
     ),
-    headlineLarge: GoogleFonts.inter(
+    headlineLarge: TextStyle(
       fontSize: FontSizes.headlineLarge,
       fontWeight: FontWeight.normal,
     ),
-    headlineMedium: GoogleFonts.inter(
+    headlineMedium: TextStyle(
       fontSize: FontSizes.headlineMedium,
       fontWeight: FontWeight.w500,
     ),
-    headlineSmall: GoogleFonts.inter(
+    headlineSmall: TextStyle(
       fontSize: FontSizes.headlineSmall,
       fontWeight: FontWeight.bold,
     ),
-    titleLarge: GoogleFonts.inter(
+    titleLarge: TextStyle(
       fontSize: FontSizes.titleLarge,
       fontWeight: FontWeight.w500,
     ),
-    titleMedium: GoogleFonts.inter(
+    titleMedium: TextStyle(
       fontSize: FontSizes.titleMedium,
       fontWeight: FontWeight.w500,
     ),
-    titleSmall: GoogleFonts.inter(
+    titleSmall: TextStyle(
       fontSize: FontSizes.titleSmall,
       fontWeight: FontWeight.w500,
     ),
-    labelLarge: GoogleFonts.inter(
+    labelLarge: TextStyle(
       fontSize: FontSizes.labelLarge,
       fontWeight: FontWeight.w500,
     ),
-    labelMedium: GoogleFonts.inter(
+    labelMedium: TextStyle(
       fontSize: FontSizes.labelMedium,
       fontWeight: FontWeight.w500,
     ),
-    labelSmall: GoogleFonts.inter(
+    labelSmall: TextStyle(
       fontSize: FontSizes.labelSmall,
       fontWeight: FontWeight.w500,
     ),
-    bodyLarge: GoogleFonts.inter(
+    bodyLarge: TextStyle(
       fontSize: FontSizes.bodyLarge,
       fontWeight: FontWeight.normal,
     ),
-    bodyMedium: GoogleFonts.inter(
+    bodyMedium: TextStyle(
       fontSize: FontSizes.bodyMedium,
       fontWeight: FontWeight.normal,
     ),
-    bodySmall: GoogleFonts.inter(
+    bodySmall: TextStyle(
       fontSize: FontSizes.bodySmall,
       fontWeight: FontWeight.normal,
     ),
@@ -176,63 +175,63 @@ ThemeData get darkTheme => ThemeData(
     elevation: 0,
   ),
   textTheme: TextTheme(
-    displayLarge: GoogleFonts.inter(
+    displayLarge: TextStyle(
       fontSize: FontSizes.displayLarge,
       fontWeight: FontWeight.normal,
     ),
-    displayMedium: GoogleFonts.inter(
+    displayMedium: TextStyle(
       fontSize: FontSizes.displayMedium,
       fontWeight: FontWeight.normal,
     ),
-    displaySmall: GoogleFonts.inter(
+    displaySmall: TextStyle(
       fontSize: FontSizes.displaySmall,
       fontWeight: FontWeight.w600,
     ),
-    headlineLarge: GoogleFonts.inter(
+    headlineLarge: TextStyle(
       fontSize: FontSizes.headlineLarge,
       fontWeight: FontWeight.normal,
     ),
-    headlineMedium: GoogleFonts.inter(
+    headlineMedium: TextStyle(
       fontSize: FontSizes.headlineMedium,
       fontWeight: FontWeight.w500,
     ),
-    headlineSmall: GoogleFonts.inter(
+    headlineSmall: TextStyle(
       fontSize: FontSizes.headlineSmall,
       fontWeight: FontWeight.bold,
     ),
-    titleLarge: GoogleFonts.inter(
+    titleLarge: TextStyle(
       fontSize: FontSizes.titleLarge,
       fontWeight: FontWeight.w500,
     ),
-    titleMedium: GoogleFonts.inter(
+    titleMedium: TextStyle(
       fontSize: FontSizes.titleMedium,
       fontWeight: FontWeight.w500,
     ),
-    titleSmall: GoogleFonts.inter(
+    titleSmall: TextStyle(
       fontSize: FontSizes.titleSmall,
       fontWeight: FontWeight.w500,
     ),
-    labelLarge: GoogleFonts.inter(
+    labelLarge: TextStyle(
       fontSize: FontSizes.labelLarge,
       fontWeight: FontWeight.w500,
     ),
-    labelMedium: GoogleFonts.inter(
+    labelMedium: TextStyle(
       fontSize: FontSizes.labelMedium,
       fontWeight: FontWeight.w500,
     ),
-    labelSmall: GoogleFonts.inter(
+    labelSmall: TextStyle(
       fontSize: FontSizes.labelSmall,
       fontWeight: FontWeight.w500,
     ),
-    bodyLarge: GoogleFonts.inter(
+    bodyLarge: TextStyle(
       fontSize: FontSizes.bodyLarge,
       fontWeight: FontWeight.normal,
     ),
-    bodyMedium: GoogleFonts.inter(
+    bodyMedium: TextStyle(
       fontSize: FontSizes.bodyMedium,
       fontWeight: FontWeight.normal,
     ),
-    bodySmall: GoogleFonts.inter(
+    bodySmall: TextStyle(
       fontSize: FontSizes.bodySmall,
       fontWeight: FontWeight.normal,
     ),

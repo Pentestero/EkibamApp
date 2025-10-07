@@ -6,9 +6,8 @@ import 'package:provisions/theme.dart';
 import 'package:provisions/screens/home_page.dart';
 import 'package:provisions/screens/auth_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await AuthService.instance.initialize();
   runApp(const MyApp());
 }
 
@@ -25,7 +24,28 @@ class MyApp extends StatelessWidget {
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: ThemeMode.system,
-        home: AuthService.instance.isLoggedIn() ? const HomePage() : const AuthScreen(),
+        home: FutureBuilder(
+          future: AuthService.instance.initialize(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            } else if (snapshot.hasError) {
+              return const Scaffold(
+                body: Center(
+                  child: Text("Une erreur est survenue lors de l'initialisation."),
+                ),
+              );
+            } else {
+              return AuthService.instance.isLoggedIn()
+                  ? const HomePage()
+                  : const AuthScreen();
+            }
+          },
+        ),
       ),
     );
   }
