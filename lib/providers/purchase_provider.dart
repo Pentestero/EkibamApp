@@ -31,7 +31,7 @@ class PurchaseProvider with ChangeNotifier {
   String _errorMessage = '';
   int? _editingPurchaseId;
 
-  Purchase _purchaseBuilder = Purchase(date: DateTime.now(), owner: '', projectType: _projectTypes.first, paymentMethod: '', createdAt: DateTime.now());
+  Purchase _purchaseBuilder = Purchase(date: DateTime.now(), owner: '', creatorInitials: '', demander: '', projectType: _projectTypes.first, paymentMethod: '', createdAt: DateTime.now());
   List<PurchaseItem> _itemsBuilder = [];
 
   List<Purchase> get purchases => _purchases;
@@ -151,9 +151,12 @@ class PurchaseProvider with ChangeNotifier {
   }
 
   void _resetPurchaseBuilder() {
+    final user = _authService.currentUser;
     _purchaseBuilder = Purchase(
       date: DateTime.now(),
-      owner: _requesters.isNotEmpty ? _requesters.first : '',
+      owner: user?.name ?? 'N/A',
+      creatorInitials: user != null ? _getInitials(user.name) : '',
+      demander: _requesters.isNotEmpty ? _requesters.first : '',
       projectType: _projectTypes.first,
       paymentMethod: _paymentMethods.isNotEmpty ? _paymentMethods.first : '',
       createdAt: DateTime.now(),
@@ -162,27 +165,33 @@ class PurchaseProvider with ChangeNotifier {
 
   Purchase _preparePurchaseForSaving() {
     final now = DateTime.now();
-    final datePrefix = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    int dailyCounter = 1;
-    for (final p in _purchases) {
-      if (p.createdAt.year == now.year && p.createdAt.month == now.month && p.createdAt.day == now.day) {
-        final pRequestNumber = p.requestNumber ?? '';
-        final parts = pRequestNumber.split('-');
-        if (parts.length == 4) {
-          dailyCounter = (int.tryParse(parts.last) ?? 0) + 1;
-          break;
-        }
-      }
-    }
-    final requestNumber = '#EKA-$datePrefix-$dailyCounter';
+    final datePrefix = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    
+    int dailyCounter = 1 + _purchases.where((p) {
+      if (p.demander != _purchaseBuilder.demander) return false;
+      return p.createdAt.year == now.year &&
+             p.createdAt.month == now.month &&
+             p.createdAt.day == now.day;
+    }).length;
+
+    final requestNumber = '${_purchaseBuilder.demander}-$datePrefix-${dailyCounter.toString().padLeft(2, '0')}';
 
     final int purchaseId = _editingPurchaseId ?? (_purchases.isNotEmpty ? _purchases.map((p) => p.id!).reduce((a, b) => a > b ? a : b) + 1 : 1);
     
+    final user = _authService.currentUser;
+
+    // If editing, use the existing request number. If it's null for some reason, generate a new one.
+    final finalRequestNumber = _editingPurchaseId == null 
+        ? requestNumber 
+        : (_purchaseBuilder.requestNumber ?? requestNumber);
+
     return _purchaseBuilder.copyWith(
       id: purchaseId,
-      requestNumber: _editingPurchaseId == null ? requestNumber : _purchaseBuilder.requestNumber,
+      requestNumber: finalRequestNumber,
       items: _itemsBuilder,
       createdAt: _editingPurchaseId == null ? now : _purchaseBuilder.createdAt,
+      owner: user?.name ?? 'N/A',
+      creatorInitials: user != null ? _getInitials(user.name) : '',
     );
   }
 
@@ -228,8 +237,8 @@ class PurchaseProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void updatePurchaseHeader({DateTime? date, String? owner, String? projectType, String? paymentMethod, String? comments}) {
-    _purchaseBuilder = _purchaseBuilder.copyWith(date: date, owner: owner, projectType: projectType, paymentMethod: paymentMethod, comments: comments);
+  void updatePurchaseHeader({DateTime? date, String? owner, String? demander, String? projectType, String? paymentMethod, String? comments}) {
+    _purchaseBuilder = _purchaseBuilder.copyWith(date: date, owner: owner, demander: demander, projectType: projectType, paymentMethod: paymentMethod, comments: comments);
     if (paymentMethod != null) _recalculateAllItemFees();
     notifyListeners();
   }
@@ -247,7 +256,9 @@ class PurchaseProvider with ChangeNotifier {
   // --- Metadata Loading ---
   Future<void> _loadProducts() async => _products = await _dbService.getProducts(_authService.currentUser!.identifier)..sort((a, b) => a.name.compareTo(b.name));
   Future<void> _loadSuppliers() async => _suppliers = await _dbService.getSuppliers(_authService.currentUser!.identifier)..sort((a, b) => a.name.compareTo(b.name));
-  Future<void> _loadRequesters() async => _requesters = await _dbService.getRequesters(_authService.currentUser!.identifier)..sort((a, b) => a.compareTo(b));
+  Future<void> _loadRequesters() async {
+    _requesters = ['CET', 'AOW', 'CNO', 'JMV', 'MNG'];
+  }
   Future<void> _loadPaymentMethods() async => _paymentMethods = await _dbService.getPaymentMethods(_authService.currentUser!.identifier)..sort((a, b) => a.compareTo(b));
 
   // --- Metadata Adding ---
@@ -266,10 +277,8 @@ class PurchaseProvider with ChangeNotifier {
   }
 
   Future<String> addNewRequester({required String name}) async {
-    final savedRequester = await _dbService.insertRequester(_authService.currentUser!.identifier, name);
-    await _loadRequesters();
-    updatePurchaseHeader(owner: savedRequester);
-    return savedRequester;
+    // This function is now a no-op as the list of requesters is fixed.
+    return Future.value(name);
   }
 
   Future<String> addNewPaymentMethod({required String name}) async {
@@ -310,5 +319,16 @@ class PurchaseProvider with ChangeNotifier {
       totals[key] = (totals[key] ?? 0) + getValue(item);
     }
     return totals;
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '';
+    final parts = name.split(' ').where((p) => p.isNotEmpty);
+    if (parts.length > 1) {
+      return parts.map((p) => p[0]).take(2).join().toUpperCase();
+    } else if (parts.isNotEmpty) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return '';
   }
 }

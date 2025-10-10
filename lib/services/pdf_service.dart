@@ -90,7 +90,7 @@ class PdfService {
               pw.Text('Demandeur: ${purchase.owner}', style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
               pw.Text('Type de Projet: ${purchase.projectType}', style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
               pw.Text('Mode de Paiement: ${purchase.paymentMethod}', style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
-              if (purchase.comments != null && purchase.comments!.isNotEmpty)
+              if (purchase.comments.isNotEmpty)
                 pw.Text('Commentaires Généraux: ${purchase.comments}', style: pw.TextStyle(fontSize: 12, fontStyle: pw.FontStyle.italic, color: PdfColors.grey700)),
             ],
           ),
@@ -116,10 +116,10 @@ class PdfService {
       data: items.map((item) => [
         item.productName ?? 'N/A',
         item.supplierName ?? 'N/A',
-        '${currencyFormat.format(item.quantity)}',
-        '${currencyFormat.format(item.unitPrice)}',
-        '${currencyFormat.format(item.paymentFee)}',
-        '${currencyFormat.format(item.total)}',
+        (currencyFormat.format(item.quantity)),
+        (currencyFormat.format(item.unitPrice)),
+        (currencyFormat.format(item.paymentFee)),
+        (currencyFormat.format(item.total)),
         item.comment ?? '',
       ]).toList(),
       border: pw.TableBorder.all(color: PdfColors.grey400),

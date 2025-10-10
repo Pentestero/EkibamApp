@@ -2,9 +2,11 @@ import 'package:provisions/models/purchase_item.dart';
 
 class Purchase {
   final int? id;
-  final String? requestNumber; // Added this field
+  final String? requestNumber; // This will be the new DEMANDEUR-date-ID
   final DateTime date;
   final String owner;
+  final String creatorInitials; // New field
+  final String demander; // New field
   final String projectType;
   final String paymentMethod;
   final String comments;
@@ -17,6 +19,8 @@ class Purchase {
     this.requestNumber,
     required this.date,
     required this.owner,
+    required this.creatorInitials,
+    required this.demander,
     required this.projectType,
     required this.paymentMethod,
     this.comments = '',
@@ -34,6 +38,8 @@ class Purchase {
       'requestNumber': requestNumber,
       'date': date.millisecondsSinceEpoch,
       'owner': owner,
+      'creatorInitials': creatorInitials,
+      'demander': demander,
       'projectType': projectType,
       'paymentMethod': paymentMethod,
       'comments': comments,
@@ -53,6 +59,8 @@ class Purchase {
       requestNumber: map['requestNumber'] as String?,
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
       owner: map['owner'] as String? ?? '',
+      creatorInitials: map['creatorInitials'] as String? ?? '', // New field
+      demander: map['demander'] as String? ?? '', // New field
       projectType: map['projectType'] as String? ?? '',
       paymentMethod: map['paymentMethod'] as String? ?? '',
       comments: map['comments'] as String? ?? '',
@@ -60,12 +68,13 @@ class Purchase {
     );
   }
 
-  // Added copyWith for easier updates
   Purchase copyWith({
     int? id,
     String? requestNumber,
     DateTime? date,
     String? owner,
+    String? creatorInitials,
+    String? demander,
     String? projectType,
     String? paymentMethod,
     String? comments,
@@ -77,6 +86,8 @@ class Purchase {
       requestNumber: requestNumber ?? this.requestNumber,
       date: date ?? this.date,
       owner: owner ?? this.owner,
+      creatorInitials: creatorInitials ?? this.creatorInitials,
+      demander: demander ?? this.demander,
       projectType: projectType ?? this.projectType,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       comments: comments ?? this.comments,

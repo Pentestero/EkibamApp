@@ -139,12 +139,12 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: provider.requesters.contains(provider.purchaseBuilder.owner) 
-                        ? provider.purchaseBuilder.owner 
+                    value: provider.requesters.contains(provider.purchaseBuilder.demander)
+                        ? provider.purchaseBuilder.demander
                         : null,
                     decoration: const InputDecoration(labelText: 'Demandeur', prefixIcon: Icon(Icons.person)),
                     items: provider.requesters.map((o) => DropdownMenuItem(value: o, child: Text(o))).toList(),
-                    onChanged: (value) => provider.updatePurchaseHeader(owner: value),
+                    onChanged: (value) => provider.updatePurchaseHeader(demander: value),
                     validator: (value) => (value == null || value.isEmpty) ? 'Champ requis' : null,
                   ),
                 ),
@@ -370,7 +370,9 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  'Achat enregistré avec succès ! N°: ${resultPurchase.requestNumber}'),
+                  provider.isEditing 
+                      ? 'Achat mis à jour avec succès ! N°: ${resultPurchase.requestNumber}'
+                      : 'Achat enregistré avec succès ! N°: ${resultPurchase.requestNumber}'),
               backgroundColor: Colors.green),
         );
         // If editing, pop back to history screen
@@ -493,7 +495,7 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: item.productId,
-                    decoration: const InputDecoration(labelText: 'Produit'),
+                    decoration: const InputDecoration(labelText: 'Catégorie'),
                     items: provider.products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
                     onChanged: (value) {
                       if (value != null) {
