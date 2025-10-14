@@ -28,8 +28,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         provider.loadPurchaseForEditing(widget.purchase!);
       } else {
         provider.clearForm(); // Ensure form is clear for new purchase
-      }
-      provider.initialize(); 
+      } 
     });
   }
 
@@ -118,24 +117,34 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
   Widget _buildHeaderCard(BuildContext context, PurchaseProvider provider) {
     return Card(
-      elevation: 2,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Informations Générales', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
+            Text('Informations Générales', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            )),
+            const SizedBox(height: 24),
             ListTile(
-              leading: const Icon(Icons.calendar_today),
+              leading: Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.primary),
               title: const Text('Date de l\'achat'),
               subtitle: Text(DateFormat('dd/MM/yyyy').format(provider.purchaseBuilder.date)),
-              trailing: const Icon(Icons.arrow_drop_down),
+              trailing: Icon(Icons.arrow_drop_down, color: Theme.of(context).colorScheme.primary),
               onTap: () => _selectDate(context, provider),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+              ),
             ),
-            const Divider(),
+            const SizedBox(height: 16),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
@@ -150,7 +159,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: Icon(Icons.add_circle, color: Theme.of(context).colorScheme.primary),
                   tooltip: 'Créer un nouveau demandeur',
                   onPressed: _showAddRequesterDialog,
                 ),
@@ -158,18 +167,18 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: provider.purchaseBuilder.projectType,
+              value: provider.purchaseBuilder.projectType,
               decoration: const InputDecoration(labelText: 'Type de Projet', prefixIcon: Icon(Icons.work)),
               items: provider.projectTypes.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
               onChanged: (value) => provider.updatePurchaseHeader(projectType: value),
             ),
             const SizedBox(height: 16),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: provider.paymentMethods.contains(provider.purchaseBuilder.paymentMethod)
+                    value: provider.paymentMethods.contains(provider.purchaseBuilder.paymentMethod)
                         ? provider.purchaseBuilder.paymentMethod
                         : null,
                     decoration: const InputDecoration(labelText: 'Mode de paiement', prefixIcon: Icon(Icons.payment)),
@@ -180,7 +189,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: Icon(Icons.add_circle, color: Theme.of(context).colorScheme.primary),
                   tooltip: 'Créer un nouveau mode de paiement',
                   onPressed: _showAddPaymentMethodDialog,
                 ),
@@ -191,6 +200,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
               controller: _commentsController,
               decoration: const InputDecoration(labelText: 'Commentaires (optionnel)', prefixIcon: Icon(Icons.comment)),
               onChanged: (value) => provider.updatePurchaseHeader(comments: value),
+              maxLines: 3,
             ),
           ],
         ),
@@ -202,10 +212,22 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Articles', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
+        Text('Articles', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        )),
+        const SizedBox(height: 16),
         if (provider.itemsBuilder.isEmpty)
-          const Center(child: Text('Appuyez sur "Ajouter un article" pour commencer.')),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32.0),
+              child: Text(
+                'Appuyez sur \"Ajouter un article\" pour commencer.',
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -232,7 +254,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
   Widget _buildTotalsCard(BuildContext context, PurchaseProvider provider) {
     return Card(
-      elevation: 2,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -241,13 +266,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text('Sous-total des articles', style: Theme.of(context).textTheme.titleMedium)),
-                Expanded(
-                  child: Text(
-                    '${NumberFormat('#,##0.00', 'fr_FR').format(provider.grandTotalBuilder - provider.purchaseBuilder.totalPaymentFees)} FCFA',
-                    style: Theme.of(context).textTheme.titleMedium,
-                    textAlign: TextAlign.right,
-                  ),
+                Text('Sous-total des articles', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  '${NumberFormat('#,##0.00', 'fr_FR').format(provider.grandTotalBuilder - provider.purchaseBuilder.totalPaymentFees)} FCFA',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
             ),
@@ -257,13 +279,10 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text('Frais de paiement totaux', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.orange[700]))),
-                    Expanded(
-                      child: Text(
-                        '${NumberFormat('#,##0.00', 'fr_FR').format(provider.purchaseBuilder.totalPaymentFees)} FCFA',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.orange[700]),
-                        textAlign: TextAlign.right,
-                      ),
+                    Text('Frais de paiement totaux', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.orange[700])),
+                    Text(
+                      '${NumberFormat('#,##0.00', 'fr_FR').format(provider.purchaseBuilder.totalPaymentFees)} FCFA',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.orange[700]),
                     ),
                   ],
                 ),
@@ -272,15 +291,15 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text('GRAND TOTAL', style: Theme.of(context).textTheme.titleLarge)),
-                Expanded(
-                  child: Text(
-                    '${NumberFormat('#,##0.00', 'fr_FR').format(provider.grandTotalBuilder)} FCFA',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                    textAlign: TextAlign.right,
+                Text('GRAND TOTAL', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                )),
+                Text(
+                  '${NumberFormat('#,##0.00', 'fr_FR').format(provider.grandTotalBuilder)} FCFA',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                 ),
               ],
@@ -298,15 +317,11 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
       child: ElevatedButton.icon(
         onPressed: provider.isLoading ? null : () => _submitForm(context, provider),
         icon: provider.isLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
             : const Icon(Icons.save),
         label: Text(provider.isLoading
             ? 'Enregistrement...'
             : (provider.isEditing ? 'Mettre à jour l\'achat' : 'Enregistrer l\'Achat')),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        ),
       ),
     );
   }
@@ -421,16 +436,18 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
   @override
   void didUpdateWidget(covariant _PurchaseItemCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final item = context.read<PurchaseProvider>().itemsBuilder[widget.index];
-    if (_quantityController.text != item.quantity.toString()) {
-      _quantityController.text = item.quantity.toString();
-    }
-    if (_priceController.text != item.unitPrice.toString()) {
-      _priceController.text = item.unitPrice.toString();
-    }
-    if (_commentController.text != item.comment) {
-      _commentController.text = item.comment ?? '';
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final item = context.read<PurchaseProvider>().itemsBuilder[widget.index];
+      if (_quantityController.text != item.quantity.toString()) {
+        _quantityController.text = item.quantity.toString();
+      }
+      if (_priceController.text != item.unitPrice.toString()) {
+        _priceController.text = item.unitPrice.toString();
+      }
+      if (_commentController.text != item.comment) {
+        _commentController.text = item.comment ?? '';
+      }
+    });
   }
 
   void _showAddProductDialog() {
@@ -473,28 +490,32 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Article #${widget.index + 1}', style: Theme.of(context).textTheme.titleMedium),
+                Text('Article #${widget.index + 1}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
                   onPressed: () => provider.removeItem(widget.index),
                 ),
               ],
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    initialValue: item.productId,
+                    value: item.productId,
                     decoration: const InputDecoration(labelText: 'Catégorie'),
                     items: provider.products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
                     onChanged: (value) {
@@ -507,7 +528,7 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: Icon(Icons.add_circle, color: Theme.of(context).colorScheme.primary),
                   tooltip: 'Créer un nouveau produit',
                   onPressed: _showAddProductDialog,
                 ),
@@ -515,11 +536,11 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
             ),
             const SizedBox(height: 12),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    initialValue: item.supplierId,
+                    value: item.supplierId,
                     decoration: const InputDecoration(labelText: 'Fournisseur'),
                     items: provider.suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
                     onChanged: (value) {
@@ -532,7 +553,7 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
+                  icon: Icon(Icons.add_circle, color: Theme.of(context).colorScheme.primary),
                   tooltip: 'Créer un nouveau fournisseur',
                   onPressed: _showAddSupplierDialog,
                 ),
@@ -577,71 +598,48 @@ class _PurchaseItemCardState extends State<_PurchaseItemCard> {
               },
               maxLines: 3,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Flexible(
-                        child: Text(
-                          'Sous-total (HT):',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Flexible(
-                        child: Text(
-                          '${NumberFormat('#,##0', 'fr_FR').format(item.quantity * item.unitPrice)} FCFA',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.right,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      const Text('Sous-total (HT):', style: TextStyle(fontSize: 14)),
+                      Text(
+                        '${NumberFormat('#,##0', 'fr_FR').format(item.quantity * item.unitPrice)} FCFA',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
-                  if (item.paymentFee > 0)
+                  if (item.paymentFee > 0) ...[
+                    const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
-                          child: Text(
-                            'Frais de paiement:',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orange[700]),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Flexible(
-                          child: Text(
-                            '${NumberFormat('#,##0.00', 'fr_FR').format(item.paymentFee)} FCFA',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.orange[700]),
-                            textAlign: TextAlign.right,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Text('Frais de paiement:', style: TextStyle(fontSize: 14, color: Colors.orange[700])),
+                        Text(
+                          '${NumberFormat('#,##0.00', 'fr_FR').format(item.paymentFee)} FCFA',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.orange[700]),
                         ),
                       ],
                     ),
+                  ],
+                  const Divider(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Flexible(
-                        child: Text(
-                          'Total Article:',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Flexible(
-                        child: Text(
-                          '${NumberFormat('#,##0.00', 'fr_FR').format(item.total)} FCFA',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.right,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      const Text('Total Article:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        '${NumberFormat('#,##0.00', 'fr_FR').format(item.total)} FCFA',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -773,7 +771,7 @@ class __AddProductDialogState extends State<_AddProductDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                initialValue: _category,
+                value: _category,
                 decoration: const InputDecoration(labelText: 'Catégorie'),
                 items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (value) {

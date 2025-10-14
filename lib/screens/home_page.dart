@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provisions/providers/purchase_provider.dart';
 import 'package:provisions/screens/dashboard_screen.dart';
 import 'package:provisions/screens/purchase_form_screen.dart';
 import 'package:provisions/screens/history_screen.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final User user;
+  const HomePage({super.key, required this.user});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -12,12 +16,27 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const PurchaseFormScreen(),
-    const HistoryScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      DashboardScreen(navigateToHistory: () => _navigateTo(2)),
+      const PurchaseFormScreen(),
+      const HistoryScreen(),
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Initialize the provider with the user from the widget.
+      context.read<PurchaseProvider>().initialize(widget.user);
+    });
+  }
+
+  void _navigateTo(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   final List<NavigationDestination> _destinations = [
     const NavigationDestination(

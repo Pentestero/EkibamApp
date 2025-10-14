@@ -41,18 +41,22 @@ class PurchaseItem {
   }
 
   static PurchaseItem fromMap(Map<String, dynamic> map) {
+    print("PurchaseItem.fromMap received map: $map"); // Debug print
+    final productName = map['productName'] as String?;
+    final supplierName = map['supplierName'] as String?;
+    print("  -> productName: $productName, supplierName: $supplierName"); // Debug print
+
     return PurchaseItem(
       id: map['id'] as int?,
-      purchaseId: map['purchaseId'] as int,
-      productId: map['productId'] as int,
-      supplierId: map['supplierId'] as int?, // Can be null
+      purchaseId: map['purchase_id'] as int? ?? 0,
+      productId: map['product_id'] as int? ?? 0,
+      supplierId: map['supplier_id'] as int?, // Can be null
       quantity: (map['quantity'] as num?)?.toDouble() ?? 0.0,
-      unitPrice: (map['unitPrice'] as num?)?.toDouble() ?? 0.0,
-      paymentFee: (map['paymentFee'] as num?)?.toDouble() ?? 0.0, // Read paymentFee, default to 0.0
+      unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0.0,
+      paymentFee: (map['payment_fee'] as num?)?.toDouble() ?? 0.0, // Read paymentFee, default to 0.0
       comment: map['comment'] as String?,
-      // The join will provide these fields
-      productName: map['productName'] as String?, 
-      supplierName: map['supplierName'] as String?,
+      productName: productName, 
+      supplierName: supplierName,
     );
   }
 

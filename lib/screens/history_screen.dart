@@ -22,9 +22,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PurchaseProvider>().loadPurchases();
-    });
     _filterOptions = ['Tous', 'Cette semaine', 'Ce mois'];
   }
 

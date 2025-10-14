@@ -1,91 +1,87 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:provisions/models/user.dart';
-
-class AuthService {
-  static const String _loggedInUserIdentifierKey = 'logged_in_user_identifier';
-  static const String _allUsersKey = 'all_users_list_v2';
-
+class AuthService with ChangeNotifier {
   AuthService._privateConstructor();
   static final AuthService instance = AuthService._privateConstructor();
 
-  AppUser? _currentUser;
-  List<AppUser> _allUsers = [];
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  AppUser? get currentUser => _currentUser;
+  /// Retourne l'utilisateur actuellement connecté depuis Supabase.
+  User? get currentUser => _supabase.auth.currentUser;
 
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
+  /// Stream qui notifie les changements d'état d'authentification (connexion, déconnexion).
+  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersString = prefs.getString(_allUsersKey) ?? '[]';
-    _allUsers = (json.decode(usersString) as List).map((data) => AppUser.fromMap(data)).toList();
-    final loggedInIdentifier = prefs.getString(_loggedInUserIdentifierKey);
-    if (loggedInIdentifier != null) {
-      try {
-        _currentUser = _allUsers.firstWhere((u) => u.identifier == loggedInIdentifier);
-      } catch (e) {
-        _currentUser = null;
-      }
-    }
-  }
-
-  bool isLoggedIn() => _currentUser != null;
-
-  Future<bool> signUp({required String name, required String identifier, required String password}) async {
-    if (_allUsers.any((user) => user.identifier == identifier)) {
-      return false; // User already exists
-    }
-    final passwordHash = _hashPassword(password);
-    final newUser = AppUser(name: name, identifier: identifier, passwordHash: passwordHash);
-    _allUsers.add(newUser);
-    _currentUser = newUser;
-    await _saveAndSetLoggedInUser(newUser);
-    return true;
-  }
-
-  Future<bool> signIn(String identifier, String password) async {
+  /// Inscrit un nouvel utilisateur avec email et mot de passe.
+  /// Le nom est stocké dans les métadonnées de l'utilisateur.
+  Future<AuthResponse> signUp({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
     try {
-      final user = _allUsers.firstWhere((u) => u.identifier == identifier);
-      final passwordHash = _hashPassword(password);
-      if (user.passwordHash == passwordHash) {
-        _currentUser = user;
-        await _saveAndSetLoggedInUser(user);
-        return true;
-      }
+      final response = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {'name': name},
+      );
+      // Après l'inscription, l'utilisateur est automatiquement connecté.
+      // On notifie les auditeurs pour mettre à jour l'UI.
+      notifyListeners();
+      return response;
+    } on AuthException catch (e) {
+      debugPrint("AuthService SignUp Error: ${e.message}");
+      rethrow;
     } catch (e) {
-      // User not found
+      debugPrint("AuthService SignUp Generic Error: $e");
+      rethrow;
     }
-    return false;
   }
 
-  Future<void> logout() async {
-    _currentUser = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_loggedInUserIdentifierKey);
+  /// Connecte un utilisateur avec email et mot de passe.
+  Future<AuthResponse> signIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      // Après la connexion, on notifie les auditeurs.
+      notifyListeners();
+      return response;
+    } on AuthException catch (e) {
+      debugPrint("AuthService SignIn Error: ${e.message}");
+      rethrow;
+    } catch (e) {
+      debugPrint("AuthService SignIn Generic Error: $e");
+      rethrow;
+    }
   }
 
+  /// Déconnecte l'utilisateur actuel.
+  Future<void> signOut() async {
+    try {
+      await _supabase.auth.signOut();
+      // La navigation est gérée par le StreamBuilder dans main.dart
+    } on AuthException catch (e) {
+      debugPrint("AuthService SignOut Error: ${e.message}");
+      rethrow;
+    } catch (e) {
+      debugPrint("AuthService SignOut Generic Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Supprime le compte de l'utilisateur actuel.
+  /// **NOTE:** La suppression complète nécessite une fonction Edge sur Supabase.
+  /// Pour l'instant, cette fonction déconnecte simplement l'utilisateur.
   Future<void> deleteCurrentUser() async {
-    if (_currentUser == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    // Remove user-specific data (purchases)
-    await prefs.remove('user_purchases_${_currentUser!.identifier}');
-    // Remove user from the list
-    _allUsers.removeWhere((user) => user.identifier == _currentUser!.identifier);
-    await prefs.setString(_allUsersKey, json.encode(_allUsers.map((u) => u.toMap()).toList()));
-    // Log out
-    await logout();
-  }
-
-  Future<void> _saveAndSetLoggedInUser(AppUser user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_allUsersKey, json.encode(_allUsers.map((u) => u.toMap()).toList()));
-    await prefs.setString(_loggedInUserIdentifierKey, user.identifier);
+    // TODO: Implement a Supabase Edge Function to handle user deletion securely.
+    // This requires deleting the user from the `auth.users` table, which is protected.
+    // For now, we just sign the user out.
+    await signOut();
   }
 }

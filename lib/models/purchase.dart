@@ -41,7 +41,7 @@ class Purchase {
       'creatorInitials': creatorInitials,
       'demander': demander,
       'projectType': projectType,
-      'paymentMethod': paymentMethod,
+      'payment_method': paymentMethod,
       'comments': comments,
       'createdAt': createdAt.millisecondsSinceEpoch,
     };
@@ -56,15 +56,15 @@ class Purchase {
   static Purchase fromMap(Map<String, dynamic> map) {
     return Purchase(
       id: map['id'] as int?,
-      requestNumber: map['requestNumber'] as String?,
-      date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
+      requestNumber: map['request_number'] as String?,
+      date: map['date'] != null ? DateTime.parse(map['date'] as String) : DateTime.now(),
       owner: map['owner'] as String? ?? '',
-      creatorInitials: map['creatorInitials'] as String? ?? '', // New field
+      creatorInitials: map['creator_initials'] as String? ?? '', // New field
       demander: map['demander'] as String? ?? '', // New field
-      projectType: map['projectType'] as String? ?? '',
-      paymentMethod: map['paymentMethod'] as String? ?? '',
+      projectType: map['project_type'] as String? ?? '',
+      paymentMethod: map['payment_method'] as String? ?? '',
       comments: map['comments'] as String? ?? '',
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int),
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at'] as String) : DateTime.now(),
     );
   }
 

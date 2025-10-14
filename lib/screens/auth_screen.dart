@@ -9,6 +9,7 @@ class AuthScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface, // Use theme background color
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -17,20 +18,20 @@ class AuthScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const AppBrand(),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16), // Adjusted spacing
               Text(
                 'Gérez vos approvisionnements simplement',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface, // Ensure text color is visible
+                ),
               ),
-              const SizedBox(height: 64),
+              const SizedBox(height: 48), // Adjusted spacing
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignUpScreen()));
                 },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+                // Removed custom style to use theme's ElevatedButtonThemeData
                 child: const Text('S\'inscrire'),
               ),
               const SizedBox(height: 16),
@@ -38,8 +39,11 @@ class AuthScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen()));
                 },
+                // Removed custom style to use theme's OutlinedButtonThemeData (if defined, otherwise default)
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  foregroundColor: Theme.of(context).colorScheme.primary, // Use primary color for text
+                  side: BorderSide(color: Theme.of(context).colorScheme.primary), // Use primary color for border
+                  padding: const EdgeInsets.symmetric(vertical: 12), // Adjusted padding for consistency
                 ),
                 child: const Text('Se connecter'),
               ),

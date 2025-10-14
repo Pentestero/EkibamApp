@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provisions/models/product.dart';
 import 'package:provisions/models/purchase.dart';
 import 'package:provisions/models/purchase_item.dart';
 import 'package:provisions/models/supplier.dart';
-import 'package:provisions/services/auth_service.dart';
 import 'package:provisions/services/database_service.dart';
 import 'package:provisions/services/excel_service.dart';
 import 'package:provisions/services/pdf_service.dart';
@@ -19,7 +19,7 @@ const Map<String, Map<String, double>> _paymentFeePercentages = {
 
 class PurchaseProvider with ChangeNotifier {
   final DatabaseService _dbService = DatabaseService.instance;
-  final AuthService _authService = AuthService.instance;
+  User? _user;
 
   List<Purchase> _purchases = [];
   List<Product> _products = [];
@@ -27,7 +27,7 @@ class PurchaseProvider with ChangeNotifier {
   List<String> _requesters = [];
   List<String> _paymentMethods = [];
 
-  bool _isLoading = false;
+  bool _isLoading = true; // Start with loading true
   String _errorMessage = '';
   int? _editingPurchaseId;
 
@@ -44,7 +44,7 @@ class PurchaseProvider with ChangeNotifier {
   String get errorMessage => _errorMessage;
   bool get isEditing => _editingPurchaseId != null;
 
-  String? get currentUserIdentifier => _authService.currentUser?.identifier;
+  String? get currentUserId => _user?.id;
 
   Map<String, double> get supplierTotals => _calculateAnalytics((item) => item.supplierName ?? 'N/A', (item) => item.total);
   Map<String, double> get projectTypeTotals => _calculateAnalytics((purchase) => purchase.projectType, (purchase) => purchase.grandTotal, isPurchaseLevel: true);
@@ -55,85 +55,83 @@ class PurchaseProvider with ChangeNotifier {
   List<PurchaseItem> get itemsBuilder => _itemsBuilder;
   double get grandTotalBuilder => _itemsBuilder.fold(0.0, (sum, item) => sum + item.total);
 
-  Future<void> initialize() async {
-    if (!_authService.isLoggedIn()) return;
-    _setLoading(true);
+  Future<void> initialize(User user) async {
+    _user = user;
+    _isLoading = true;
+    notifyListeners();
+
     await Future.wait([
-      loadPurchases(),
+      loadPurchases(notify: false),
       _loadProducts(),
       _loadSuppliers(),
       _loadRequesters(),
       _loadPaymentMethods(),
     ]);
     _resetPurchaseBuilder();
-    _setLoading(false);
+
+    _isLoading = false;
+    notifyListeners();
   }
 
-  Future<void> loadPurchases() async {
-    if (!_authService.isLoggedIn()) return;
-    _setLoading(true);
-    try {
-      _purchases = await _dbService.getAllPurchases(_authService.currentUser!.identifier); 
-      _setErrorMessage('');
-    } catch (e) {
-      _setErrorMessage('Erreur chargement achats: $e');
+  Future<void> loadPurchases({bool notify = true}) async {
+    if (_user == null) return;
+    if (notify) {
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
     }
-    _setLoading(false);
-  }
 
-  Future<void> _savePurchases() async {
-    if (!_authService.isLoggedIn()) return;
     try {
-      await _dbService.saveAllPurchases(_authService.currentUser!.identifier, _purchases);
+      _purchases = await _dbService.getAllPurchases();
+      _errorMessage = '';
     } catch (e) {
-      _setErrorMessage('Erreur sauvegarde achats: $e');
+      _errorMessage = 'Erreur chargement achats: $e';
+    } finally {
+      if (notify) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<Purchase?> addPurchase() async {
-    if (_itemsBuilder.isEmpty) {
-      _setErrorMessage('Veuillez ajouter au moins un article.');
+    if (_user == null) {
+      _errorMessage = 'Utilisateur non authentifié.';
+      notifyListeners();
       return null;
     }
-    _setLoading(true);
+    if (_itemsBuilder.isEmpty) {
+      _errorMessage = 'Veuillez ajouter au moins un article.';
+      notifyListeners();
+      return null;
+    }
+
+    _isLoading = true;
+    notifyListeners();
+
     try {
-      final newPurchase = _preparePurchaseForSaving();
+      final purchaseToSave = _preparePurchaseForSaving();
+      final newPurchase = await _dbService.addPurchase(purchaseToSave, _user!.id);
+      
       _purchases.insert(0, newPurchase);
-      await _savePurchases();
       clearForm();
-      _setLoading(false);
       return newPurchase;
     } catch (e) {
-      _setErrorMessage("Erreur lors de l'ajout: $e");
-      _setLoading(false);
+      _errorMessage = "Erreur lors de l'ajout: $e";
       return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<Purchase?> updatePurchase() async {
-    if (_editingPurchaseId == null) return null;
-    _setLoading(true);
-    try {
-      final updatedPurchase = _preparePurchaseForSaving();
-      final index = _purchases.indexWhere((p) => p.id == _editingPurchaseId);
-      if (index != -1) {
-        _purchases[index] = updatedPurchase;
-      }
-      await _savePurchases();
-      clearForm();
-      _setLoading(false);
-      return updatedPurchase;
-    } catch (e) {
-      _setErrorMessage("Erreur lors de la mise à jour: $e");
-      _setLoading(false);
-      return null;
-    }
+    print("Update feature not implemented yet.");
+    return null;
   }
 
   Future<void> deletePurchase(int id) async {
-    _purchases.removeWhere((p) => p.id == id);
-    await _savePurchases();
-    notifyListeners();
+    print("Delete feature not implemented yet.");
   }
 
   void loadPurchaseForEditing(Purchase purchase) {
@@ -151,11 +149,12 @@ class PurchaseProvider with ChangeNotifier {
   }
 
   void _resetPurchaseBuilder() {
-    final user = _authService.currentUser;
+    if (_user == null) return;
+    final userName = _user!.userMetadata?['name'] as String? ?? 'N/A';
     _purchaseBuilder = Purchase(
       date: DateTime.now(),
-      owner: user?.name ?? 'N/A',
-      creatorInitials: user != null ? _getInitials(user.name) : '',
+      owner: userName,
+      creatorInitials: _getInitials(userName),
       demander: _requesters.isNotEmpty ? _requesters.first : '',
       projectType: _projectTypes.first,
       paymentMethod: _paymentMethods.isNotEmpty ? _paymentMethods.first : '',
@@ -176,11 +175,10 @@ class PurchaseProvider with ChangeNotifier {
 
     final requestNumber = '${_purchaseBuilder.demander}-$datePrefix-${dailyCounter.toString().padLeft(2, '0')}';
 
-    final int purchaseId = _editingPurchaseId ?? (_purchases.isNotEmpty ? _purchases.map((p) => p.id!).reduce((a, b) => a > b ? a : b) + 1 : 1);
-    
-    final user = _authService.currentUser;
+    final int purchaseId = _editingPurchaseId ?? 0;
 
-    // If editing, use the existing request number. If it's null for some reason, generate a new one.
+    final userName = _user?.userMetadata?['name'] as String? ?? 'N/A';
+
     final finalRequestNumber = _editingPurchaseId == null 
         ? requestNumber 
         : (_purchaseBuilder.requestNumber ?? requestNumber);
@@ -190,12 +188,11 @@ class PurchaseProvider with ChangeNotifier {
       requestNumber: finalRequestNumber,
       items: _itemsBuilder,
       createdAt: _editingPurchaseId == null ? now : _purchaseBuilder.createdAt,
-      owner: user?.name ?? 'N/A',
-      creatorInitials: user != null ? _getInitials(user.name) : '',
+      owner: userName,
+      creatorInitials: _getInitials(userName),
     );
   }
 
-  // --- Item Management ---
   void addNewItem() {
     if (_products.isEmpty || _suppliers.isEmpty) return;
     final newItem = PurchaseItem(
@@ -253,61 +250,54 @@ class PurchaseProvider with ChangeNotifier {
     }
   }
 
-  // --- Metadata Loading ---
-  Future<void> _loadProducts() async => _products = await _dbService.getProducts(_authService.currentUser!.identifier)..sort((a, b) => a.name.compareTo(b.name));
-  Future<void> _loadSuppliers() async => _suppliers = await _dbService.getSuppliers(_authService.currentUser!.identifier)..sort((a, b) => a.name.compareTo(b.name));
+  Future<void> _loadProducts() async => _products = await _dbService.getProducts()..sort((a, b) => a.name.compareTo(b.name));
+  Future<void> _loadSuppliers() async => _suppliers = await _dbService.getSuppliers()..sort((a, b) => a.name.compareTo(b.name));
   Future<void> _loadRequesters() async {
     _requesters = ['CET', 'AOW', 'CNO', 'JMV', 'MNG'];
   }
-  Future<void> _loadPaymentMethods() async => _paymentMethods = await _dbService.getPaymentMethods(_authService.currentUser!.identifier)..sort((a, b) => a.compareTo(b));
+  Future<void> _loadPaymentMethods() async => _paymentMethods = await _dbService.getPaymentMethods()..sort((a, b) => a.compareTo(b));
 
-  // --- Metadata Adding ---
   Future<Product> addNewProduct({required String name, required String unit, required String category, double defaultPrice = 0.0}) async {
-    final newProduct = await _dbService.insertProduct(_authService.currentUser!.identifier, Product(name: '$category: $name', unit: unit, defaultPrice: defaultPrice));
+    if (_user == null) throw Exception('User not authenticated');
+    final newProduct = await _dbService.insertProduct(_user!.id, Product(name: '$category: $name', unit: unit, defaultPrice: defaultPrice));
     await _loadProducts();
     notifyListeners();
     return newProduct;
   }
 
   Future<Supplier> addNewSupplier({required String name}) async {
-    final newSupplier = await _dbService.insertSupplier(_authService.currentUser!.identifier, Supplier(name: name));
+    if (_user == null) throw Exception('User not authenticated');
+    final newSupplier = await _dbService.insertSupplier(_user!.id, Supplier(name: name));
     await _loadSuppliers();
     notifyListeners();
     return newSupplier;
   }
 
   Future<String> addNewRequester({required String name}) async {
-    // This function is now a no-op as the list of requesters is fixed.
     return Future.value(name);
   }
 
   Future<String> addNewPaymentMethod({required String name}) async {
-    final savedPaymentMethod = await _dbService.insertPaymentMethod(_authService.currentUser!.identifier, name);
+    if (_user == null) throw Exception('User not authenticated');
+    final savedPaymentMethod = await _dbService.insertPaymentMethod(_user!.id, name);
     await _loadPaymentMethods();
     updatePurchaseHeader(paymentMethod: savedPaymentMethod);
     return savedPaymentMethod;
   }
 
-  // --- Helpers ---
   Future<void> exportToExcel() async {
-    _setLoading(true);
+    _isLoading = true;
+    notifyListeners();
     await ExcelService.shareExcelReport(_purchases);
-    _setLoading(false);
-  }
-
-  Future<void> exportToPdf() async {
-    _setLoading(true);
-    await PdfService.generatePurchaseReport(_purchases);
-    _setLoading(false);
-  }
-
-  void _setLoading(bool loading) {
-    _isLoading = loading;
+    _isLoading = false;
     notifyListeners();
   }
 
-  void _setErrorMessage(String message) {
-    _errorMessage = message;
+  Future<void> exportToPdf() async {
+    _isLoading = true;
+    notifyListeners();
+    await PdfService.generatePurchaseReport(_purchases);
+    _isLoading = false;
     notifyListeners();
   }
 

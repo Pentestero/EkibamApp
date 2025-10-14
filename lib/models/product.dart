@@ -17,7 +17,7 @@ class Product {
       'id': id,
       'name': name,
       'unit': unit,
-      'defaultPrice': defaultPrice,
+      'default_price': defaultPrice,
     };
   }
 
@@ -26,7 +26,7 @@ class Product {
       id: map['id'],
       name: map['name'],
       unit: map['unit'],
-      defaultPrice: map['defaultPrice'],
+      defaultPrice: (map['default_price'] ?? 0.0).toDouble(),
     );
   }
 

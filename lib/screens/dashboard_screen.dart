@@ -8,21 +8,9 @@ import 'package:intl/intl.dart';
 import 'package:provisions/services/auth_service.dart';
 import 'package:provisions/screens/auth_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
-
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PurchaseProvider>().loadPurchases();
-    });
-  }
+class DashboardScreen extends StatelessWidget {
+  final VoidCallback navigateToHistory;
+  const DashboardScreen({super.key, required this.navigateToHistory});
 
   @override
   Widget build(BuildContext context) {
@@ -31,40 +19,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
                 title: Consumer<PurchaseProvider>(
-          builder: (context, provider, child) {
-            final userName = AuthService.instance.currentUser?.name ?? '';
+          builder: (context, purchaseProvider, child) {
+            final user = Provider.of<AuthService>(context, listen: false).currentUser;
+            final userName = user?.userMetadata?['name'] ?? '';
             return Text('Bienvenue, $userName');
           },
         ),
                 actions: [
           IconButton(
-            icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
-            tooltip: 'Supprimer le compte',
-            onPressed: () => _confirmDeleteAccount(context),
-          ),
-          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Se déconnecter',
             onPressed: () async {
-              await AuthService.instance.logout();
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const AuthScreen()),
-                  (Route<dynamic> route) => false,
-                );
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              context.read<PurchaseProvider>().loadPurchases();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.file_download),
-            onPressed: () {
-              context.read<PurchaseProvider>().exportToExcel();
+              await AuthService.instance.signOut();
             },
           ),
         ],
@@ -108,14 +74,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 // Welcome section
                 Card(
+                  color: Theme.of(context).colorScheme.primaryContainer, // Use theme color
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         Icon(
-                          Icons.handyman,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.primary,
+                          Icons.inventory_2,
+                          size: 60,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer, // Use theme color
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -125,7 +92,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Text(
                                 'Gestion des approvisionnements',
-                                style: Theme.of(context).textTheme.headlineSmall,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer, // Use theme color
+                                ),
                               ),
                             ],
                           ),
@@ -145,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         title: 'Total Dépensé',
                         value: '${currencyFormat.format(provider.totalSpent)} FCFA',
                         icon: Icons.account_balance_wallet,
-                        color: Colors.green,
+                        color: Theme.of(context).colorScheme.secondary, // Use theme color
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -154,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         title: 'Achats Totaux',
                         value: provider.totalPurchases.toString(),
                         icon: Icons.shopping_cart,
-                        color: Colors.blue,
+                        color: Theme.of(context).colorScheme.tertiary, // Use theme color
                       ),
                     ),
                   ],
@@ -205,21 +174,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       TextButton(
-                        onPressed: () {
-                          // Note: Navigation to history will be handled by bottom nav
-                        },
+                        onPressed: navigateToHistory,
                         child: const Text('Voir tout'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...provider.purchases.take(3).map((purchase) => Card(
+                  ...provider.purchases.take(2).map((purchase) => Card(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest, // Use theme color
+                    margin: const EdgeInsets.symmetric(vertical: 6), // Add vertical margin
                     child: ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.shopping_cart),
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primary, // Use theme color
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary, // Use theme color
+                        child: const Icon(Icons.shopping_cart),
                       ),
-                      title: Text('${purchase.requestNumber ?? 'Achat'} de ${purchase.items.length} article(s)'),
-                      subtitle: Text('Demandeur: ${purchase.owner} • Projet: ${purchase.projectType}'),
+                      title: Text(
+                        '${purchase.requestNumber ?? 'Achat'} de ${purchase.items.length} article(s)',
+                        style: Theme.of(context).textTheme.titleMedium, // Use theme text style
+                      ),
+                      subtitle: Text(
+                        'Demandeur: ${purchase.owner} • Projet: ${purchase.projectType}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant, // Use theme color
+                        ),
+                      ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -228,6 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             '${currencyFormat.format(purchase.grandTotal)} FCFA',
                             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary, // Use theme color
                             ),
                           ),
                           Text(
@@ -242,6 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 if (provider.purchases.isEmpty)
                   Card(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest, // Use theme color
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Column(
@@ -275,37 +256,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
-    );
-  }
-
-  void _confirmDeleteAccount(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Supprimer le compte ?'),
-          content: const Text('Cette action est irréversible. Toutes les données associées à ce compte seront définitivement perdues. Êtes-vous sûr ?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Annuler'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Supprimer'),
-              onPressed: () async {
-                await AuthService.instance.deleteCurrentUser();
-                if (mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const AuthScreen()),
-                    (Route<dynamic> route) => false,
-                  );
-                }
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }
